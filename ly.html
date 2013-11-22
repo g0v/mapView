@@ -147,8 +147,7 @@
   //          this.model.bind('change:preview', this.changeHands);
             this.model.bind('change:centerZoom', this.changeHands);
 
-            
-            this.osmUrl='http://{s}.tile.cloudmade.com/18df1b16998a4f6bb66853a494dc197b/997/256/{z}/{x}/{y}.png';
+            this.osmUrl = 'http://otile1.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png';
 
             this.cloudmadeAttribution = 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade';   
 
@@ -501,24 +500,24 @@
 
 
     });
-
     
 var lyMap = new LY_MAP();
 
 var Router = Backbone.Router.extend({
   routes: {
     "search/:keys" : "search",
-    "focus/:addr" : "focus"
+    "focus/:addr" : "focus",
+    "stick/:latLng" : "stick"
   },
  
-  search : function(keys) {
+  search: function(keys) {
     $('input#search').val(decodeURIComponent(keys.split('/')[0]));
 
     lyMap.model.set({ search: $('input#search').val() });
 //    lyMap.changeHands('search');
   },
 
-  focus : function(addr) {
+  focus: function(addr) {
 
     $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22"+ addr +"%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
 
@@ -532,16 +531,47 @@ var Router = Backbone.Router.extend({
                             center: new L.LatLng(lat, lng),
                             zoom: 11 } });
       });
-    }
+   },
+
+   // 測試中的功能
+
+   stick: function(latLng) {
+        var lat = latLng.split(',')[0];
+        var lng = latLng.split(',')[1];
+
+        $('input#search').val('');
+        location.hash = '#stick/'+ lat + ',' + lng;
+
+        lyMap.model.set( {centerZoom : {
+                        center: new L.LatLng(lat, lng),
+                        zoom: 11 } });
+   },
 
 });
  
 var yC = new this.Router;
  
 Backbone.history.start();
+
+
+   // 測試中的功能
+function focusOn(position) {    
+    console.log( '#stick/'+ position.coords.latitude + ',' +  position.coords.longitude );
+    location.hash = '#stick/'+ position.coords.latitude + ',' +  position.coords.longitude; 
+}   
     
-    
-    
+   // 測試中的功能
+function getLocation()  {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(focusOn);
+    }
+    else {
+        console.log("Geolocation is not supported by this browser.");
+    }
+}
+   // 測試中的功能
+
+// getLocation();
         
 
 </script>
