@@ -1,0 +1,554 @@
+<html>
+
+<head>
+
+    <META Charset = "utf-8" />
+
+<link rel="stylesheet" type="text/css" class="ui" href="stylesheets/semantic.min.css">
+<link rel="stylesheet" href="Leaflet.iconlabel-master/lib/leaflet-dist/leaflet.css" />
+
+<link rel="stylesheet" href="Leaflet.iconlabel-master/dist/leaflet.iconlabel.css" />
+<link rel="stylesheet" href="Leaflet.iconlabel-master/src/Icon.Label.css" />
+<link rel="stylesheet" href="stylesheets/lyMap.css" />
+
+
+<!--[if lte IE 8]>
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.ie.css" />
+<![endif]-->
+
+<style>
+
+    .mapLabel {
+    	text-align: center;
+        color: rgba(0,0,0,1);
+        background-color: rgba(255,255,255,1);
+        max-width: 6rem;
+        max-height: 1rem;
+        overflow: hidden;
+    }
+    .mapLabel:hover {
+        background-color: rgba(200,255,255,1);
+        font-size: 1.1rem;
+        max-width: 420px;
+        max-height: 15rem;
+    }
+    .leaflet-clickable:hover {
+        z-index: 99999 !important;
+    }
+
+    .mapPopup {
+ /*       width: 400px;
+        border-radius: 15px;
+        background-color: rgba(255,255,255,0.8); */
+    }
+</style>
+
+<script src="javascripts/lib/jquery-1.10.2.js"></script>
+<script src="javascripts/lib/jquery-ui.js"></script>
+<script src="javascripts/lib/underscore-min.js"></script>
+<script src="javascripts/lib/backbone-min.js"></script>
+
+<script src="javascripts/lib/tongwen_core.js"></script>
+<script src="javascripts/lib/tongwen_table_pt2s.js"></script>
+<script src="javascripts/lib/tongwen_table_t2s.js"></script>
+
+<script src='https://cdn.firebase.com/v0/firebase.js'></script>
+
+<!--
+<script src="javascripts/lib/leaflet-src.js"></script>
+<script src="javascripts/lib/leaflet.js"></script> -->
+
+<script src="Leaflet.iconlabel-master/lib/leaflet-dist/leaflet.js"></script>
+<script src="Leaflet.iconlabel-master/lib/leaflet-dist/leaflet-src.js"></script>
+
+<!--<script src="http://leaflet.github.io/Leaflet.label/leaflet.label.js"></script> -->
+
+	<script src="javascripts/lib/Marker.Label.js"></script>
+	<script src="javascripts/lib/Icon.Label.js"></script>
+    <script src="javascripts/lib/Icon.Label.Default.js"></script>
+    <script src="Leaflet.iconlabel-master/dist/leaflet.iconlabel.js"></script>
+
+<title>民代地圖--快速找民代</title>
+
+    <script type="text/javascript">        
+        function makeTimeStamp(){
+            var d = new Date();
+
+            var curr_second = d.getSeconds();
+            var curr_minute = d.getMinutes();
+            var curr_hour = d.getHours();
+            (curr_hour > 12) ? curr_hour = ' 下午 ' + (curr_hour - 12) : curr_hour = ' 上午 ' + curr_hour;
+            var curr_date = d.getDate();
+            var curr_month = d.getMonth() + 1; //Months are zero based
+            var curr_year = d.getFullYear();
+
+            return curr_year +"/" + curr_month + "/" + curr_date + curr_hour + ':' + curr_minute +':'+ curr_second;
+        }
+    </script>
+
+</head>
+
+<body>
+
+    <div id="searchDiv">            <!-- Point:Search  Status: Usable lev 1-->
+        <div id="searchbox">
+            <input id="search" type="text" placeholder="輸入關鍵字或地區">
+            <button id="goSearch">Go!</button>
+        </div>
+    </div>
+
+
+
+    <div id="backUp">            <!-- Point:Backup  Status: Usable lev 1-->
+ 
+        <button id="goBackUp" onclick = "location = 'https://github.com/g0v/twlyparser/blob/master/data/mly-8.json'">備份.json資料</button>
+    </div>
+
+
+    <div id="map">                          <!-- Point: Main-Map   Status: Usable lev0 -->
+    </div>
+
+    
+<script>
+
+//    var preview = false;
+
+    var userNum;
+
+    AutoModel = Backbone.Model.extend({
+            defaults: {
+                    preview: false,
+                    search: false,
+                    centerZoom: {
+                        center: new L.LatLng(23.654299340, 120.44776492196047),
+                        zoom: 7
+                    }
+                },
+            initialize: function(model) {
+ //               alert('aaa');
+            },
+    });
+
+    LY_MAP = Backbone.View.extend({
+        el: $('body'),
+
+        events: {
+            'keypress input#search' : 'maybeSearch',
+            'click button#goSearch' : 'maybeSearch',
+            'click button#formPerview' : 'formPerview',
+            'click button#formSubmit' : 'formSubmit'
+        },
+
+        model: new AutoModel(),
+
+        initialize: function() {
+
+            _.bindAll(this, 'feedback', 'maybeSearch','changeHands', 'render');
+
+            this.model.bind('change:search', this.changeHands);
+  //          this.model.bind('change:preview', this.changeHands);
+            this.model.bind('change:centerZoom', this.changeHands);
+
+            
+            this.osmUrl='http://{s}.tile.cloudmade.com/1dc4012079d54f93b27789a1fc4491e9/997/256/{z}/{x}/{y}.png';
+
+            this.cloudmadeAttribution = 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade';   
+
+            this.welcomeWord = L.popup().setLatLng([22.01, 123.26]).setContent("<div id = 'welcome' style = 'font-size:2rem'><p>歡迎使用「自學2.0」地圖式互助通訊錄！！</p><p>自學的路不孤單，相信您一定很快能找到志同道合的朋友與共學夥伴👼</p></div>");
+
+
+            this.render();
+        },
+
+        maybeSearch: function(ev) {
+            console.log(ev.target);
+            if ( ev.which === 13 || $(ev.target).attr('id') == 'goSearch' ) {
+                $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22"+ $('input#search').val() +"%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
+
+                        console.log(data);
+
+                        if(!data.query.results.Result.line1) location.hash = '#search/' + encodeURI($('input#search').val());
+
+                        else if (data.query.results.Result.line1.replace($('input#search').val(),'').length < 3) {
+                            location.hash = '#focus/' + encodeURI($('input#search').val());
+                            return;
+                        }
+                        else {
+	                        location.hash = '#search/' + encodeURI($('input#search').val());
+	                    }
+
+                  });               
+
+            }
+        },
+
+        changeHands: function() {
+
+            console.log('call changeHands');
+
+            $("#map").fadeOut(1000);
+
+       ///     alert('aaa');
+
+            setTimeout(function() {
+                $('#map').remove();
+                $('body').append("<div id = 'map'></div>");
+                console.log('removeMap');
+                eval("lyMap.render()");
+            }, 2000);
+
+        },
+
+        render: function() {
+
+            var osmUrl = this.osmUrl;
+            var attribution = this.cloudmadeAttribution;
+            var welcomeWord = this.welcomeWord;
+
+            var centerZoom = this.model.get('centerZoom');
+            var preview = this.model.get('preview');
+
+            var showType = 'a';
+            var seek;
+
+
+            $.getJSON('json/mly-8.json',
+                function(data) {
+                    console.log(data);
+
+                    var markers = [];
+                    var fMarkers = [];
+                    var lMarkers = [];
+                    var eMarkers = [];
+                    var gMarkers = [];
+                    var mMarkers = [];  
+                    var latlngUsed = [];
+                    var labels = new L.FeatureGroup();                    
+
+           //         userNum = data.length;  //?
+
+                    var map = L.map('map', centerZoom);
+
+
+                    for (var i = 0; i < data.length; i++) {
+
+                        console.log(i);
+                        var hand = data[i];
+
+                        if (!hand) continue;
+
+                        console.log(hand.name); console.log(hand.contact);
+
+                        console.log(Object.keys(hand.contact));
+                        var contactNames = Object.keys(hand.contact);
+
+                        for (var j = 0; j < contactNames.length; j++) {
+                            console.log(contactNames[j]);
+
+                           var seek = $('input#search').val();
+                           var seeks = seek.split(/\s+/);
+                            console.log(seeks);
+
+                            function makeFlag (hand, fork) {
+
+                                var addr;
+                                if (fork.address) addr = fork.address.replace(/\d+號/, '').replace(/鄉.+$/, '鄉');
+
+                                $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22" + addr + "%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
+
+
+                                    console.log(fork);
+
+                                    var handNow = hand;
+                                    var flag;
+
+
+                                    console.log(data);
+                                    if(!data) return;
+                                    if(!data.query) return;
+                                    if(!data.query.results) return;
+
+                                    if(!data.query.results.Result.latitude) return;
+
+                                    var lat = data.query.results.Result.latitude;
+                                    var lng = data.query.results.Result.longitude;
+
+                                    var latLng = lat+','+lng;
+                                    console.log("Find: " +latLng);
+
+                                    if (!handNow.party) handNow.party = 'NP';   
+
+                                    var showParty = {
+                                        KMT : '中國國民黨',
+                                        DPP : '民主進步黨',
+                                        PFP : '親民黨',
+                                        NSU : '無黨團結聯盟',
+                                        TSU : '台灣團結聯盟',
+                                        NP : '無黨籍',
+                                    };
+
+                                    maybeShowParty = handNow.party;
+                                    if (showParty[handNow.party]) maybeShowParty = showParty[handNow.party];
+
+                                    flag = '<div class="flag">'
+                         //          +'<font color = "grey">加入時間: '+hand.時間戳記+'</font><br />'
+                                    +'<h2> 😀 '+handNow.name+'😀</h2><br />'
+                                    +'<h2>  '+handNow.party+'('+maybeShowParty+')'+'</h2><br />'
+                                    +'<h2>  '+latLng+'</h2><br />'
+                                    +'<h2>  '+'問政記錄 (公報) (影城)'+'</h2><br />'
+                                    +'<h2> 地址 '+fork.address+'</h2><br />'
+                                    +'<h2> 電話 '+fork.phone+'</h2><br />'
+                                    +'<h2> 傳真 '+fork.fax+'</h2><br />'
+
+                                    +'</div>';                        
+
+                                    console.log("Find2: " + latLng);           
+
+                                    if (seek) {
+                                        var seekGood = false;
+                                        for (var k = 0; k < seeks.length; k++) {
+                                            var look = seeks[k]
+                                            if (seek[k] && flag.search(look) > -1) {
+                                                seekGood = true;
+                                            }
+                                        };
+
+                                        if (!seekGood) {
+                                            console.log(seeks.join()+'：'+flag.search(look)+'略過'+hand.name);
+                                            return;
+                                        }
+
+                                        if (flag) {
+                                            for (var k = 0; k < seeks.length; k++) {
+                                                var look = seeks[k];
+                                                if (look){
+                                                   console.log(look);
+                                                   flag = flag.replace(look,'<span style = "background-color: rgba(255,255,155,1) ">' + look + '</span>')
+                                                }
+                                            };                        
+                                        }
+                                    };
+
+
+
+                                    if (!latLng) {
+                                        console.log('Error: Null LatLng:' + i + 'th');
+                                        return;
+                                    }
+
+                                    if (latLng.split(',').length != 2) {
+                                        return;
+                                    }
+
+                                    //重覆座標的解決，待測   displacement algorithm
+
+                                    var counter = 0;
+
+                                    for (var k = 0; k < latlngUsed.length; k++) {
+                                        if (latlngUsed[k] == latLng) counter++ ;
+                                    };
+
+                                    function modifyLatLng (latLng, counter) {   //  "lat,lng"
+                                        var lat = parseFloat(latLng.split(',')[0]);
+                                        var lng = parseFloat(latLng.split(',')[1]);
+
+                                        var r = counter / 1000;
+                                        var theta = counter * Math.PI / 12;
+
+                                        var lngOffSet = r * Math.cos(theta);    // x
+                                        var latOffSet = r * Math.sin(theta) / 2;    // y
+
+                                        console.log(latOffSet + ',' + lngOffSet);
+
+                                        return ((lat + latOffSet) + ',' + (lng + lngOffSet));
+                                    }
+
+                                    latlngUsed.push(latLng);
+
+                             //       if (counter > 0) latLng = modifyLatLng(latLng, counter);
+                                    
+                                    
+                                    var color = {Url: 'img/leaf-green.png', h: 70};
+
+                              //      hand.Style = 'large_green';
+
+                                    console.log(hand.name + hand.Style);
+
+                                    switch (hand.party) {
+                                        case 'KMT' :
+                                            color.Url = 'img/leaf-blue.png';
+                                            break;
+                                        case 'DPP' :
+                                            color.Url = 'img/leaf-green.png';               break;
+                            //            case 'large_blue' :
+                           //                 color.Url = 'img/leaf-purple.png';               break;
+                           //             case 'large_red' :
+                           //                 color.Url = 'img/leaf-red.png';
+                           //                 break;
+                                        default:
+                                            color.Url = 'img/leaf-yellow.png';
+                                    }
+
+                                    var SweetIcon = L.Icon.Label.extend({
+                                        options: {
+                               //             iconUrl: colorUrl,
+                                  //          shadowUrl: 'img/leaf-green.png',
+                                            iconSize: new L.Point(35, color.h),
+                                            iconAnchor: new L.Point(-12, -5-color.h),
+                                            labelAnchor: new L.Point(20, 20-color.h),
+                                            wrapperAnchor: new L.Point(12, 13),
+                                            labelClassName: 'mapLabel'
+                                        }
+                                    });
+
+                                    markers[4*i + j] = new L.Marker(
+                                        new L.LatLng(
+                                                    latLng.split(',')[0],
+                                                    latLng.split(',')[1]
+                                                ),
+                                        { icon: new SweetIcon({ iconUrl: color.Url, 
+                                            labelText: handNow.name
+                                            +'<br/> '+handNow.party+'('+maybeShowParty+')'
+                                            +'<br/> 問政記錄 (公報) (影城)'
+                                            +'<br/> 地址 '+fork.address
+                                            +'<br/> 電話 '+fork.phone
+                                            +'<br/> 傳真 '+fork.fax
+                                             }) }
+                                    ).bindPopup(flag, {
+                                            className: 'mapPopup' });
+
+                                    labels.addLayer(markers[4*i + j]);
+                                       
+                                });
+                            }
+
+
+                            hand.contactFork = hand.contact[contactNames[j]];
+
+                            console.log(hand.contactFork.address);
+
+                            makeFlag(hand, hand.contactFork);
+                        };
+                    };
+
+
+     //               var goodMarkers = [];
+
+//                    for (var i = 0; i < markers.length; i++) {
+  //                      if (!markers[i]) {
+            //                console.log("null marker:"+i);
+    //                        continue;
+      //                  }
+        //                goodMarkers.push(markers[i]);
+          //          };
+
+            //        console.log("aaa");
+
+        //            for (var i = 0; i < goodMarkers.length; i++) {            
+      //                  labels.addLayer(goodMarkers[i]);
+    //                };
+
+
+            // !!this will run faster than marker comes in!!
+
+                    var hands = {
+                     a: labels,  // 所有人           good!
+          //           f: L.layerGroup(fMarkers),  // 自學家庭         
+            //         l: L.layerGroup(lMarkers),  // 自學生
+              //       e: L.layerGroup(eMarkers),  // 教育工作者
+                //     g: L.layerGroup(gMarkers),  // 自學團體
+                  //   m: L.layerGroup(mMarkers),  // 當月新人
+                    }
+
+
+                    var minimal = L.tileLayer(osmUrl, {
+                        styleId: 113475,
+                        attribution: attribution,
+                        maxZoom: 20
+                    }); 
+      //            var midnight  = L.tileLayer(osmUrl, {
+      //                  styleId: 113784,
+      //                  attribution: attribution,
+      //                  maxZoom: 20
+      //              });
+
+
+                    var baseMaps = {
+                        "白天": minimal,
+      //                  "黑夜": midnight    //bug here-- 沒有連到樣式
+                    };
+
+
+                    this.overlayMaps = {
+                   //     "自學家庭": hands.f,
+                 //       "自學生": hands.l,
+               //         "獨立教育工作者": hands.e,
+             //           "自學團體": hands.g,
+           //             "顯示當月新人": hands.m,         
+                        "顯示全部": hands.a,
+                    };
+
+                    map.addLayer(minimal);                
+                    map.addLayer(hands[showType]);  
+
+                    L.control.layers(baseMaps, this.overlayMaps).addTo(map);  // 之後可以設圖層
+
+                });  //close Json
+
+        },
+
+        feedback: function() {
+        },
+
+
+
+    });
+
+    
+var lyMap = new LY_MAP();
+
+var Router = Backbone.Router.extend({
+  routes: {
+    "search/:keys" : "search",
+    "focus/:addr" : "focus"
+  },
+ 
+  search : function(keys) {
+    $('input#search').val(decodeURIComponent(keys.split('/')[0]));
+
+    lyMap.model.set({ search: $('input#search').val() });
+//    lyMap.changeHands('search');
+  },
+
+  focus : function(addr) {
+
+    $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22"+ addr +"%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
+
+            var lat = data.query.results.Result.latitude;
+            var lng = data.query.results.Result.longitude;
+
+            $('input#search').val('');
+            location.hash = '#focus/'+ encodeURI(addr);
+
+            lyMap.model.set( {centerZoom : {
+                            center: new L.LatLng(lat, lng),
+                            zoom: 11 } });
+      });
+    }
+
+});
+ 
+var yC = new this.Router;
+ 
+Backbone.history.start();
+    
+    
+    
+        
+
+</script>
+
+</body>
+
+
+</hmtl>
