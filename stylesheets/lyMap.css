@@ -3,7 +3,7 @@ body {
     background-color: rgba(200,200,155,1);
 }
 
-#map { float: left; height: 800px; width: 74%; min-width: 420px; border-radius: 15px}
+#map { float: left; height: 100%; width: 100%; min-width: 420px; border-radius: 15px}
 
 #searchDiv { position:fixed; top: 20px; left: 60px; z-index: 1}
 
