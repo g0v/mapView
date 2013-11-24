@@ -66,9 +66,16 @@
     <script src="javascripts/lib/Icon.Label.Default.js"></script>
     <script src="Leaflet.iconlabel-master/dist/leaflet.iconlabel.js"></script>
 
+
+<script src='https://cdn.firebase.com/v0/firebase.js'></script>
+
 <title>民代地圖--快速找民代</title>
 
     <script type="text/javascript">        
+
+  //      var myDataRef = new Firebase('https://lymapview.firebaseio.com');
+
+
         function makeTimeStamp(){
             var d = new Date();
 
@@ -153,8 +160,14 @@
 
             this.welcomeWord = L.popup().setLatLng([22.01, 123.26]).setContent("<div id = 'welcome' style = 'font-size:2rem'><p>歡迎使用「自學2.0」地圖式互助通訊錄！！</p><p>自學的路不孤單，相信您一定很快能找到志同道合的朋友與共學夥伴👼</p></div>");
 
+            var render = this.render;
 
-            this.render();
+        
+            $.getJSON ('json/lymapview-export.json', function(data) {
+
+                render(data);
+            
+            });
         },
 
         maybeSearch: function(ev) {
@@ -196,7 +209,9 @@
 
         },
 
-        render: function() {
+        render: function(data) {
+
+            var latlngtable = data;
 
             var osmUrl = this.osmUrl;
             var attribution = this.cloudmadeAttribution;
@@ -210,6 +225,7 @@
 
 
             $.getJSON('json/mly-8.json',
+
                 function(data) {
                     console.log(data);
 
@@ -227,7 +243,11 @@
                     var map = L.map('map', centerZoom);
 
 
+
+
+
                     for (var i = 0; i < data.length; i++) {
+
 
                         console.log(i);
                         var hand = data[i];
@@ -242,16 +262,20 @@
                         for (var j = 0; j < contactNames.length; j++) {
                             console.log(contactNames[j]);
 
-                           var seek = $('input#search').val();
-                           var seeks = seek.split(/\s+/);
+                            var seek = $('input#search').val();
+                            var seeks = seek.split(/\s+/);
                             console.log(seeks);
 
-                            function makeFlag (hand, fork) {
+
+
+                            function makeFlag (hand, fork, i, j) {
 
                                 var addr;
                                 if (fork.address) addr = fork.address.replace(/\d+號/, '').replace(/鄉.+$/, '鄉');
 
-                                $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22" + addr + "%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
+
+
+                   //             $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22" + addr + "%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
 
 
                                     console.log(fork);
@@ -260,17 +284,28 @@
                                     var flag;
 
 
-                                    console.log(data);
-                                    if(!data) return;
-                                    if(!data.query) return;
-                                    if(!data.query.results) return;
+                       //             console.log(data);
+                         //           if(!data) return;
+                           //         if(!data.query) return;
+                             //       if(!data.query.results) return;
 
-                                    if(!data.query.results.Result.latitude) return;
+                               //     if(!data.query.results.Result.latitude) return;
 
-                                    var lat = data.query.results.Result.latitude;
-                                    var lng = data.query.results.Result.longitude;
+ //                                   var lat = data.query.results.Result.latitude;
+   //                                 var lng = data.query.results.Result.longitude;
 
-                                    var latLng = lat+','+lng;
+     //                               var latLng = lat+','+lng;
+
+
+
+                                    if (!latlngtable[i]) return;
+                                    if (!latlngtable[i][j]) return;
+                                    if (!latlngtable[i][j].latlng) return;
+                                    var latLng = latlngtable[i][j].latlng;
+
+
+                //                    myDataRef.child(i).child(j).set( {'latlng': latLng });
+
                                     console.log("Find: " +latLng);
 
                                     if (!handNow.party) handNow.party = 'NP';   
@@ -327,6 +362,8 @@
                                     };
 
 
+                                    latLng = latLng;
+                                    console.log(latLng);
 
                                     if (!latLng) {
                                         console.log('Error: Null LatLng:' + i + 'th');
@@ -345,11 +382,13 @@
                                         if (latlngUsed[k] == latLng) counter++ ;
                                     };
 
+                                    console.log(latLng.split(',')[0]);
+
                                     function modifyLatLng (latLng, counter) {   //  "lat,lng"
                                         var lat = parseFloat(latLng.split(',')[0]);
                                         var lng = parseFloat(latLng.split(',')[1]);
 
-                                        var r = counter / 1000;
+                                        var r = counter / 10000;
                                         var theta = counter * Math.PI / 12;
 
                                         var lngOffSet = r * Math.cos(theta);    // x
@@ -361,15 +400,13 @@
                                     }
 
                                     latlngUsed.push(latLng);
-
-                             //       if (counter > 0) latLng = modifyLatLng(latLng, counter);
-                                    
+                                    if (counter > 0) latLng = modifyLatLng(latLng, counter);                                   
                                     
                                     var color = {Url: 'img/leaf-green.png', h: 70};
 
                               //      hand.Style = 'large_green';
 
-                                    console.log(hand.name + hand.Style);
+                               //     console.log(hand.name + hand.Style);
 
                                     switch (hand.party) {
                                         case 'KMT' :
@@ -398,6 +435,7 @@
                                         }
                                     });
 
+
                                     markers[4*i + j] = new L.Marker(
                                         new L.LatLng(
                                                     latLng.split(',')[0],
@@ -416,7 +454,7 @@
 
                                     labels.addLayer(markers[4*i + j]);
                                        
-                                });
+                     //           });
                             }
 
 
@@ -424,7 +462,7 @@
 
                             console.log(hand.contactFork.address);
 
-                            makeFlag(hand, hand.contactFork);
+                            makeFlag(hand, hand.contactFork, i, j);
                         };
                     };
 
@@ -461,7 +499,7 @@
                     var minimal = L.tileLayer(osmUrl, {
                         styleId: 113475,
                         attribution: attribution,
-                        maxZoom: 20
+                        maxZoom: 17
                     }); 
       //            var midnight  = L.tileLayer(osmUrl, {
       //                  styleId: 113784,
