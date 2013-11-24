@@ -318,12 +318,17 @@
                                     maybeShowParty = handNow.party;
                                     if (showParty[handNow.party]) maybeShowParty = showParty[handNow.party];
 
+                                    function etiq (name) {
+                                        return name.substring(0, 1) + '委員' + name.substring(1, name.length);
+                                    }
+
+
                                     flag = '<div class="flag">'
                          //          +'<font color = "grey">加入時間: '+hand.時間戳記+'</font><br />'
                                     +'<h2> 😀 '+handNow.name+'😀</h2><br />'
                                     +'<h2>  '+handNow.party+'('+maybeShowParty+')'+'</h2><br />'
                                     +'<h2>  '+latLng+'</h2><br />'
-                                    +'<h2>  '+'問政記錄 (<a href = "http://open.ly.g0v.tw/search?utf8=✓&q='+hand.name+'" target = "_blank">公報 </a>) (<a href = "http://ivod.ly.g0v.tw/onair" target = "_blank">影城</a>)'+'</h2><br />'
+                                    +'<h2>  '+'問政記錄 (<a href = "http://open.ly.g0v.tw/search?utf8=✓&q='+etiq(hand.name)+'" target = "_blank">公報 </a>) (<a href = "http://ivod.ly.g0v.tw/onair" target = "_blank">影城</a>)'+'</h2><br />'
                                     +'<h2> 地址 '+fork.address+'</h2><br />'
                                     +'<h2> 電話 '+fork.phone+'</h2><br />'
                                     +'<h2> 傳真 '+fork.fax+'</h2><br />'
@@ -440,7 +445,7 @@
                                         { icon: new SweetIcon({ iconUrl: color.Url, 
                                             labelText: handNow.name
                                             +'<br/> '+handNow.party+'('+maybeShowParty+')'
-                                            +'<br/> 問政記錄 (<a href = "http://open.ly.g0v.tw/search?utf8=✓&q='+hand.name+'" target = "_blank">公報 </a>)(<a href = "http://ivod.ly.g0v.tw/onair" target = "_blank">影城</a>)'
+                                            +'<br/> 問政記錄 (<a href = "http://open.ly.g0v.tw/search?utf8=✓&q='+etiq(hand.name)+'" target = "_blank">公報 </a>)(<a href = "http://ivod.ly.g0v.tw/onair" target = "_blank">影城</a>)'
                                             +'<br/> 地址 '+fork.address
                                             +'<br/> 電話 '+fork.phone
                                             +'<br/> 傳真 '+fork.fax
