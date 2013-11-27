@@ -111,6 +111,12 @@
 
 
     <div id="map">                          <!-- Point: Main-Map   Status: Usable lev0 -->
+        <div id = "warning">本地圖不支援IE瀏覽器<br/>若無法顯示，請改用<a href = "http://moztw.org/firefox/" target = "_blank">Firefox瀏覽器</a><br/>謝謝您的支持。</div>
+
+        <script type="text/javascript">
+            $('#warning').hide();
+            setTimeout(function(){$('#warning').show();}, 5000);
+        </script>
     </div>
 
     
