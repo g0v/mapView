@@ -124,9 +124,13 @@
 
 //    var preview = false;
 
+    var map; var labels;
+  //  var newlabels = [];
+  //  var showLabels = [];
     var userNum;
+    var index;
 
-    AutoModel = Backbone.Model.extend({
+    LY_Model = Backbone.Model.extend({
             defaults: {
                     preview: false,
                     search: false,
@@ -150,13 +154,13 @@
             'click button#formSubmit' : 'formSubmit'
         },
 
-        model: new AutoModel(),
+        model: new LY_Model(),
 
         initialize: function() {
 
             _.bindAll(this, 'feedback', 'maybeSearch','changeHands', 'render');
 
-            this.model.bind('change:search', this.changeHands);
+  //          this.model.bind('change:search', this.changeHands);
   //          this.model.bind('change:preview', this.changeHands);
             this.model.bind('change:centerZoom', this.changeHands);
 
@@ -168,17 +172,20 @@
 
             var render = this.render;
 
-            if ($('#hiddenIndex').val()) {
-                index = $('#hiddenIndex').val();
-                render(index)
-            }
-            else {
-                $.getJSON ('json/lymapview-export.json', function(index) {
+            if (!location.hash) {
 
+                if ($('#hiddenIndex').val()) {
+                    index = eval($('#hiddenIndex').val());
                     render(index);
-            
-                });
+                }
+                else {
+                    $.getJSON ('json/lymapview-export.json', function(index) {
+                        render(index);
+                
+                    });
+                }
             }
+
         },
 
         maybeSearch: function(ev) {
@@ -203,26 +210,37 @@
             }
         },
 
-        changeHands: function() {
+        changeHands: function() {    //  bug here <---
 
             console.log('call changeHands');
 
             $("#map").fadeOut(1000);
 
-       ///     alert('aaa');
-
             setTimeout(function() {
+
                 $('#map').remove();
+
                 $('body').append("<div id = 'map'></div>");
                 console.log('removeMap');
-                eval("lyMap.render()");
+                
+               if ($('#hiddenIndex').val()) {
+                    index = eval($('#hiddenIndex').val());
+                    lyMap.render(index);
+                }
+                else {
+                    $.getJSON ('json/lymapview-export.json', function(index) {
+                        lyMap.render(index);               
+                    });
+                }
             }, 2000);
 
         },
 
-        render: function(data) {
+        render: function(index) {
 
-            var latlngtable = data;
+            console.log(index);
+
+            var latlngtable = index;
 
             var osmUrl = this.osmUrl;
             var attribution = this.cloudmadeAttribution;
@@ -238,18 +256,18 @@
                     console.log(data);
 
                     var markers = [];
-                    var fMarkers = [];
-                    var lMarkers = [];
-                    var eMarkers = [];
-                    var gMarkers = [];
-                    var mMarkers = [];  
+                    var kMarkers = [];
+                    var dMarkers = [];
+                    var oMarkers = [];
                     var latlngUsed = [];
-                    var labels = new L.FeatureGroup();                    
+                    
+                    labels = new L.FeatureGroup();
 
-                    var map = L.map('map', centerZoom);
+               //     try { map = L.map('map', centerZoom); console.log('newMap');} catch(err) {console.log(err)};
+
+                    map = L.map('map', centerZoom);
 
                     for (var i = 0; i < data.length; i++) {
-
 
                         console.log(i);
                         var hand = data[i];
@@ -276,28 +294,10 @@
                                 if (fork.address) addr = fork.address.replace(/\d+號/, '').replace(/鄉.+$/, '鄉');
 
 
-
-                   //             $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22" + addr + "%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
-
-
                                     console.log(fork);
 
                                     var handNow = hand;
                                     var flag;
-
-
-                       //             console.log(data);
-                         //           if(!data) return;
-                           //         if(!data.query) return;
-                             //       if(!data.query.results) return;
-
-                               //     if(!data.query.results.Result.latitude) return;
-
- //                                   var lat = data.query.results.Result.latitude;
-   //                                 var lng = data.query.results.Result.longitude;
-
-     //                               var latLng = lat+','+lng;
-
 
 
                                     if (!latlngtable[i]) return;
@@ -305,8 +305,6 @@
                                     if (!latlngtable[i][j].latlng) return;
                                     var latLng = latlngtable[i][j].latlng;
 
-
-                //                    myDataRef.child(i).child(j).set( {'latlng': latLng });
 
                                     console.log("Find: " +latLng);
 
@@ -330,7 +328,6 @@
 
 
                                     flag = '<div class="flag">'
-                         //          +'<font color = "grey">加入時間: '+hand.時間戳記+'</font><br />'
                                     +'<h2> 😀 '+handNow.name+'😀</h2><br />'
                                     +'<h2>  '+handNow.party+'('+maybeShowParty+')'+'</h2><br />'
                                     +'<h2>  '+latLng+'</h2><br />'
@@ -391,14 +388,21 @@
 
                                     console.log(latLng.split(',')[0]);
 
-                                    function modifyLatLng (latLng, counter) {   //  "lat,lng"
+                                    function modifyLatLng (addr, latLng, counter) {   //  "lat,lng"
                                         var lat = parseFloat(latLng.split(',')[0]);
                                         var lng = parseFloat(latLng.split(',')[1]);
 
-                                        var r = counter / 10000;
-                                        var theta = counter * Math.PI / 12;
+                                        var r = (counter) / 2500;
+                                        var l = 1;
+                                        var mul = 3 / 2;
 
-                                        var lngOffSet = r * Math.cos(theta);    // x
+                                        console.log(addr);
+
+                                        if (addr.search('鎮江街') > -1) mul = 1/2; 
+                                        if (addr.search('青島東路') > -1) {mul = 1; l = 3}; 
+                                        var theta = Math.PI * mul;
+
+                                        var lngOffSet = r * Math.cos(theta) * l;    // x
                                         var latOffSet = r * Math.sin(theta) / 2;    // y
 
                                         console.log(latOffSet + ',' + lngOffSet);
@@ -407,7 +411,7 @@
                                     }
 
                                     latlngUsed.push(latLng);
-                                    if (counter > 0) latLng = modifyLatLng(latLng, counter);                                   
+                                    if (counter > 0) latLng = modifyLatLng(fork.address,latLng, counter);                                   
                                     
                                     var color = {Url: 'img/leaf-green.png', h: 70};
 
@@ -460,46 +464,35 @@
                                             className: 'mapPopup' });
 
                                     labels.addLayer(markers[4*i + j]);
+
+                                //    newlabels.push(markers[4*i + j]);
+
+                                    switch (hand.party) {
+                                        case 'KMT' :
+                                            kMarkers.push(markers[4*i + j]);
+                                            break;
+                                        case 'DPP' :
+                                            dMarkers.push(markers[4*i + j]);              
+                                            break;
+                                        default:
+                                            oMarkers.push(markers[4*i + j]);
+                                    }
                                        
                      //           });
                             }
-
-
                             hand.contactFork = hand.contact[contactNames[j]];
-
                             console.log(hand.contactFork.address);
-
                             makeFlag(hand, hand.contactFork, i, j);
                         };
                     };
 
-
-     //               var goodMarkers = [];
-
-//                    for (var i = 0; i < markers.length; i++) {
-  //                      if (!markers[i]) {
-            //                console.log("null marker:"+i);
-    //                        continue;
-      //                  }
-        //                goodMarkers.push(markers[i]);
-          //          };
-
-            //        console.log("aaa");
-
-        //            for (var i = 0; i < goodMarkers.length; i++) {            
-      //                  labels.addLayer(goodMarkers[i]);
-    //                };
-
-
-            // !!this will run faster than marker comes in!!
+            //        showLabels = newlabels;
 
                     var hands = {
                      a: labels,  // 所有人           good!
-          //           f: L.layerGroup(fMarkers),  // 自學家庭         
-            //         l: L.layerGroup(lMarkers),  // 自學生
-              //       e: L.layerGroup(eMarkers),  // 教育工作者
-                //     g: L.layerGroup(gMarkers),  // 自學團體
-                  //   m: L.layerGroup(mMarkers),  // 當月新人
+                     kmt: L.layerGroup(kMarkers),  // KMT
+                     dpp: L.layerGroup(dMarkers),  // DPP
+                     oth: L.layerGroup(oMarkers),  // Other
                     }
 
 
@@ -522,13 +515,13 @@
 
 
                     this.overlayMaps = {
-                   //     "自學家庭": hands.f,
-                 //       "自學生": hands.l,
-               //         "獨立教育工作者": hands.e,
-             //           "自學團體": hands.g,
-           //             "顯示當月新人": hands.m,         
+                        "國民黨": hands.kmt,
+                        "民進黨": hands.dpp,
+                        "其他": hands.oth,         
                         "顯示全部": hands.a,
                     };
+
+                    console.log(hands.a);
 
                     map.addLayer(minimal);                
                     map.addLayer(hands[showType]);  
@@ -538,8 +531,8 @@
                 }
 
             if ($('#hiddenData').val()){
-                var data = eval($('#hiddenData').val());
-                main(data);
+                var lydata = eval($('#hiddenData').val());
+                main(lydata);
             }
 
             else {
@@ -555,64 +548,127 @@
 
     });
     
-var lyMap = new LY_MAP();
+var lyMap;
+
+$(document).ready(function(){
+    lymap = new LY_MAP();
+});
 
 var Router = Backbone.Router.extend({
   routes: {
     "search/:keys" : "search",
     "focus/:addr" : "focus",
-    "stick/:latLng" : "stick"
+    "near/:addr" : "near",
+    "show/:type" : "show",
+    "get/:addr" : "get",
+    "update/:num" : "update",
+    ":word" : "maybe"
   },
  
   search: function(keys) {
     $('input#search').val(decodeURIComponent(keys.split('/')[0]));
+    lyMap.model.set({ search: keys, welcome: false });
 
-    lyMap.model.set({ search: $('input#search').val() });
-//    lyMap.changeHands('search');
+    console.log("search:"+ keys);
+
+    lyMap.changeHands();
   },
 
-  focus: function(addr) {
+  focus: function(addr, num, command) {
+
+    if(!num) num = 12;
+    if(!command) command = '#focus/';
 
     $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22"+ addr +"%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
 
             var lat = data.query.results.Result.latitude;
             var lng = data.query.results.Result.longitude;
 
-            $('input#search').val('');
-            location.hash = '#focus/'+ encodeURI(addr);
+            location.hash = command + encodeURI(addr);
+            $('input#search').val(decodeURIComponent(addr));
 
             lyMap.model.set( {centerZoom : {
                             center: new L.LatLng(lat, lng),
-                            zoom: 11 } });
+                            zoom: num },
+                            search: '',
+                            welcome: false});
+
+            map.setView(new L.LatLng(lat, lng), num);
+
       });
-   },
+  },
 
-   // 測試中的功能
+  near: function (addr) {
+    this.focus(addr, 14,'#near/');
+  },
 
-   stick: function(latLng) {
-        var lat = latLng.split(',')[0];
-        var lng = latLng.split(',')[1];
 
-        $('input#search').val('');
-        location.hash = '#stick/'+ lat + ',' + lng;
+  show: function (type) {
+    lyMap.model.set( {showType : type, welcome: false } );
+    lyMap.changeHands();
+  },
 
-        lyMap.model.set( {centerZoom : {
-                        center: new L.LatLng(lat, lng),
-                        zoom: 11 } });
-   },
+  get: function(addr) {
+    $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22"+ addr +"%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
+
+            var lat = data.query.results.Result.latitude;
+            var lng = data.query.results.Result.longitude;
+
+            console.log(lat+','+lng);
+            location.hash = '#get/'+(lat+','+lng);
+      });
+  },
+
+  maybe: function (word){
+
+    if (/^[amfleg]$/.test(word)) {location.hash = '#show/' + encodeURI(word); return}
+
+    $('input#search').val(word);
+
+    $.getJSON( "http://query.yahooapis.com/v1/public/yql?q=select+%2A+from+geo.placefinder+where+text%3D%22"+ word +"%22+and+locale%3D%22zh_TW%22&format=json", function( data ) {
+
+            var obj = data.query.results.Result;
+            console.log(obj);
+
+            if(!data.query.results.Result.latitude) {
+                location.hash = '#search/' + encodeURI(word);
+                return;
+            }
+
+            else {
+
+                var checklist = ['line1','line2','line3','line4'];
+
+                for (var i = 0; i < checklist.length; i++) {
+                    if (!obj[checklist[i]]) continue;
+                    if (obj[checklist[i]].replace(word,'').length < 3) {
+
+                        if (word.length < 4) {
+                            location.hash = '#focus/' + encodeURI(word);
+                        }
+                        else {
+                            location.hash = '#near/' + encodeURI(word);
+                        }
+                        return;
+                    }
+                };
+
+                location.hash = '#search/' + encodeURI(word);
+                return;
+            }
+
+      });         
+  },
+
+
 
 });
  
 var yC = new this.Router;
  
 Backbone.history.start();
-
-
-   // 測試中的功能
-function focusOn(position) {    
-    console.log( '#stick/'+ position.coords.latitude + ',' +  position.coords.longitude );
-    location.hash = '#stick/'+ position.coords.latitude + ',' +  position.coords.longitude; 
-}   
+    
+    
     
    // 測試中的功能
 function getLocation()  {
@@ -623,9 +679,6 @@ function getLocation()  {
         console.log("Geolocation is not supported by this browser.");
     }
 }
-   // 測試中的功能
-
-// getLocation();
         
 
 </script>
