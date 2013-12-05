@@ -10,6 +10,7 @@
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+    <script src = "javascripts/lib/jquery-1.10.2.js"></script>
     <title>Mapview by g0v</title>
   </head>
 
@@ -31,10 +32,46 @@
         <hr>
 
         <section id="main_content">
-          <h1>
-<a name="mapview" class="anchor" href="#mapview"><span class="octicon octicon-link"></span></a>mapView</h1>
+          <h1> 如何開始一個地圖? </h1>
 
-<p>using map to render data and make social activities</p>
+
+          <ol>使用資源：
+            <li>Leaflet+leaflet.iconlabel：畫地圖和旗幟用</li>
+            <li>jQuery+Backbone：結構和I/O。當然你可以改用Angular來實作它，不過目前就沒有現成的源碼來改。</li>
+            <li>firebase(optional)：如果要用互認地圖的畫，需要開一個後端。firebase是一個簡便的後端選項。</li>
+          </ol>
+
+          <ol>概念：
+            <li>通訊錄：單向呈現，如民代地圖</li>
+            <li>互認地圖：雙向資料處理與呈現，如自學2.0</li>
+          </ol>
+
+
+          <ol>區塊：
+            <li>中央地圖：Leaflet內建，地圖底層的tile取自openstreetmap</li>
+
+            <li>左左上：Zoom In/Out：Leaflet內建，不用另外寫</li>
+
+            <li>左上搜詢：在自學2.0或民代地圖的原碼中，整個照烤即可</li>
+
+            <li>左下留言與聊天區：在自學2.0的原碼中，chatDiv部份，請把firebase的連結改為您自己使用的firebase(重要)</li>
+
+            <li>右下備份按鈕：請把backUp裡面按鈕的loction = 後面改成您的資料.json檔所在處</li>
+
+            <li>最右表單：如果要做互認地圖，請用自學2.
+              0的原碼，join的部份，烤下來改，記得把firebase的連結改為您自己使用的firebase(重要)</li>
+
+            <li>右上控制區Leaflet內建，上半部是單選，下半部份複選。需要自行定義資料的分類方式以順利呈現</li>
+
+            <li>主要的旗幟生成：目前還沒有用便利的Template，所以請直接改原始碼中的flag部份。如果你的資料格式和民代地圖不同(很可能不同)，請把讀取的位置和資料處理的一些標記，也一併改掉</li>
+
+            <li> 使用者的探索層次：可分為圖形+label(簡)+label(全)、popup、站外連結四個部份來探索。
+              <br/>在自學2.0和民代地圖中，圖形+label(簡)是一眼就可看到的、label(全)是滑上去可看到的、popup則是點擊才能看到。
+              <br/>Tip: label(簡)和label(全)的變換是靠修改css就可以做到
+              <br/>Tip: popup之中放超連結，讓想更深入瞭解的人，一層一層去探索。</li>
+
+          </ol>
+
         </section>
 
         <footer>
@@ -45,5 +82,24 @@
         
       </div>
     </div>
+
+    <script type="text/javascript">
+      $(document).ready(function(){
+          $("li").each(function( index ) {
+              $(this).html($(this).html()
+                .replace(/自學2\.0/g, '<a href="http://bestian.github.io/shackhand/auto20.html">自學2.0</a>')
+                .replace(/民代地圖/g, '<a href="http://g0v.github.io/mapView/ly.html">民代地圖</a>')
+                .replace(/firebase/g, '<a href="https://www.firebase.com">firebase</a>')
+                .replace(/Leaflet/g, '<a href="http://leafletjs.com">Leaflet</a>')
+                .replace(/leaflet.iconlabel/g, '<a href="https://github.com/jacobtoye/Leaflet.iconlabel">leaflet.iconlabel</a>')
+                .replace(/Backbone/g, '<a href="http://backbonejs.org">Backbone</a>')
+                .replace(/jQuery/g, '<a href="http://jquery.com">jQuery</a>')
+                .replace(/openstreetmap/g, '<a href = http://www.openstreetmap.org/">openstreetmap</a>')
+                .replace(/Angular/g, '<a href = "http://angularjs.org">Angular</a>')
+                );
+          });
+      });
+    </script>
+
   </body>
 </html>
