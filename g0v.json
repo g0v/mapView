@@ -34,6 +34,7 @@
   ],
   "needs": [
     "designer",
-    "coder"
+    "coder",
+    "link with other g0v projects"
   ]
 }
